@@ -123,7 +123,7 @@
 
 <script>
 // ===== 설정: Apps Script 배포 URL =====
-const GAS_URL = "https://script.google.com/macros/s/AKfycbz0eJSLThrRJg3VmAdDnQkCNbiDmCLydBlq7uLs37pUd3Fh4PEd90Mc3AMJSEl4vlho/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxR6dzN1pk6vQmJzYPghLyammPDTzEFrKj77Rr922t8iCoV1wGgBjWgevfR5na481pj/exec";
 
 const QUESTION_POOL = [
   { q: "하나님이 아브라함에게 바치라고 명하신 아들의 이름은?", options: ["이삭", "이스마엘", "야곱", "에서"], correct: 0, explain: "정답은 이삭입니다. 하나님은 아브라함의 믿음을 시험하기 위해 아들 이삭을 번제로 바치라 하셨고, 순종하자 천사가 막고 대신 숫양을 예비하셨습니다." },
@@ -262,11 +262,14 @@ async function submitForm() {
 
   show("stage-submitting");
   try {
-    await fetch(GAS_URL, {
-      method: "POST",
+    const params = new URLSearchParams({
+      name: name,
+      phone: phone,
+      concerns: concerns.join(", "),
+    });
+    await fetch(GAS_URL + "?" + params.toString(), {
+      method: "GET",
       mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ name, phone, concerns }),
     });
     document.getElementById("thanksName").textContent = name;
     show("stage-thanks");
