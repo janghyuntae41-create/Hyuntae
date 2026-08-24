@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>성경 퀴즈 & 나눔</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: linear-gradient(to bottom, #1e1b4b, #312e81, #0f172a);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+  .wrap { width: 100%; max-width: 400px; }
+  h1 { font-size: 20px; text-align: center; margin: 0 0 24px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .badge { background:#fbbf24; color:#1e1b4b; border-radius:999px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  p.sub { color:#a5b4fc; font-size:14px; text-align:center; margin-bottom:24px; }
+  .btn {
+    width:100%; border:none; border-radius:12px; padding:16px; font-weight:700; font-size:16px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary { background:#fbbf24; color:#1e1b4b; }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-secondary { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
+  .qcard { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:20px; margin-bottom:16px; }
+  .qcard p { font-size:18px; font-weight:700; line-height:1.4; margin:0; }
+  .options { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+  .opt {
+    text-align:left; padding:14px 16px; border-radius:12px; font-size:14px; font-weight:600;
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); color:#fff; cursor:pointer;
+  }
+  .opt.selected { background:rgba(251,191,36,.25); border-color:#fbbf24; }
+  .opt.correct { background:rgba(16,185,129,.3); border-color:#34d399; }
+  .opt:disabled { cursor:default; }
+  .explain-box { background:rgba(16,185,129,.1); border:1px solid rgba(52,211,153,.3); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .explain-box p { font-size:14px; line-height:1.6; margin:0 0 8px; }
+  .replay { background:none; border:none; color:#6ee7b7; font-size:12px; text-decoration:underline; cursor:pointer; padding:0; }
+  .row-top { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#a5b4fc; margin-bottom:12px; }
+  .concerns { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
+  .concern-btn { padding:16px; border-radius:12px; font-weight:700; font-size:14px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.05); color:#fff; cursor:pointer; }
+  .concern-btn.selected { background:rgba(251,113,133,.25); border-color:#fb7185; color:#fecdd3; }
+  input[type=text], input[type=tel] {
+    width:100%; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:12px;
+    padding:14px 16px; color:#fff; font-size:15px; margin-bottom:12px; outline:none;
+  }
+  input::placeholder { color:#818cf8; }
+  .center { text-align:center; }
+  .err { color:#f87171; font-size:14px; text-align:center; margin-bottom:12px; }
+  .hidden { display:none; }
+  .heart { font-size:32px; margin-bottom:8px; }
+  .thanks-icon { font-size:56px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="badge">📖</span> 성경 퀴즈 &amp; 나눔</h1>
+
+  <!-- 시작 화면 -->
+  <div id="stage-setup">
+    <p class="sub">4개의 성경 퀴즈 후, 함께 나눌 고민을 골라보는 시간을 가집니다.</p>
+    <button class="btn btn-primary" onclick="startQuiz()">시작하기</button>
+  </div>
+
+  <!-- 문제 화면 -->
+  <div id="stage-question" class="hidden">
+    <div class="row-top">
+      <span id="qcounter"></span>
+      <span>편하게 답해보세요</span>
+    </div>
+    <div class="qcard"><p id="qtext"></p></div>
+    <div class="options" id="options"></div>
+    <button class="btn btn-primary hidden" id="btn-reveal" onclick="reveal()">정답 공개</button>
+
+    <div id="reveal-block" class="hidden">
+      <div class="explain-box">
+        <p id="explaintext"></p>
+        <button class="replay" onclick="speak(currentQ().explain)">🔊 다시 듣기</button>
+      </div>
+      <button class="btn btn-primary" id="btn-next" onclick="nextAfterReveal()">다음 문제 →</button>
+    </div>
+  </div>
+
+  <!-- 고민 선택 -->
+  <div id="stage-concerns" class="hidden">
+    <div class="center">
+      <div class="heart">💗</div>
+      <p style="font-weight:700; font-size:18px; margin:4px 0;">요즘 마음에 있는 고민이 있다면</p>
+      <p class="sub">해당하는 것을 모두 골라주세요</p>
+    </div>
+    <div class="concerns" id="concernsGrid"></div>
+    <button class="btn btn-primary" onclick="goContact()">다음 →</button>
+  </div>
+
+  <!-- 연락처 -->
+  <div id="stage-contact" class="hidden">
+    <p class="sub">나중에 더 이야기 나눌 수 있도록 연락처를 남겨주세요</p>
+    <input type="text" id="nameInput" placeholder="이름" />
+    <input type="tel" id="phoneInput" placeholder="연락처 (010-0000-0000)" />
+    <div class="err hidden" id="errMsg"></div>
+    <button class="btn btn-primary" onclick="submitForm()">📨 기도 시작</button>
+  </div>
+
+  <!-- 전송 중 -->
+  <div id="stage-submitting" class="hidden center" style="margin-top:60px;">
+    <div style="font-size:32px;">⏳</div>
+    <p class="sub">저장 중...</p>
+  </div>
+
+  <!-- 완료 -->
+  <div id="stage-thanks" class="hidden center" style="margin-top:40px;">
+    <div class="thanks-icon">✅</div>
+    <p style="font-size:20px; font-weight:700; margin:8px 0;">감사합니다, <span id="thanksName"></span>님</p>
+    <p class="sub" style="margin-bottom:32px;">나눠주신 이야기 소중히 기억하겠습니다.</p>
+    <button class="btn btn-secondary" onclick="restart()">🔄 처음으로</button>
+  </div>
+</div>
+
+<script>
+// ===== 설정: Apps Script 배포 URL =====
+const GAS_URL = "https://script.google.com/macros/s/AKfycbz0eJSLThrRJg3VmAdDnQkCNbiDmCLydBlq7uLs37pUd3Fh4PEd90Mc3AMJSEl4vlho/exec";
+
+const QUESTION_POOL = [
+  { q: "하나님이 아브라함에게 바치라고 명하신 아들의 이름은?", options: ["이삭", "이스마엘", "야곱", "에서"], correct: 0, explain: "정답은 이삭입니다. 하나님은 아브라함의 믿음을 시험하기 위해 아들 이삭을 번제로 바치라 하셨고, 순종하자 천사가 막고 대신 숫양을 예비하셨습니다." },
+  { q: "모세가 이스라엘 백성을 이끌고 건넌 바다는?", options: ["갈릴리 바다", "홍해", "사해", "지중해"], correct: 1, explain: "정답은 홍해입니다. 모세가 지팡이를 들자 하나님이 바다를 갈라 이스라엘 백성이 마른 땅으로 건넜습니다." },
+  { q: "다윗이 물맷돌로 쓰러뜨린 블레셋 장수는?", options: ["아비멜렉", "골리앗", "삼손", "느부갓네살"], correct: 1, explain: "정답은 골리앗입니다. 다윗은 물맷돌 하나로 거인 장수 골리앗을 쓰러뜨렸습니다." },
+  { q: "요셉의 형들이 요셉을 판 대상은?", options: ["애굽 상인", "미디안/이스마엘 상인", "블레셋 사람", "모압 사람"], correct: 1, explain: "정답은 미디안, 이스마엘 상인입니다. 형들은 시기하여 요셉을 상인들에게 팔았습니다." },
+  { q: "사자굴에 들어갔으나 살아난 선지자는?", options: ["다니엘", "엘리야", "엘리사", "이사야"], correct: 0, explain: "정답은 다니엘입니다. 기도를 멈추지 않아 사자굴에 던져졌지만 하나님이 지켜주셨습니다." },
+  { q: "예수님이 물을 포도주로 바꾼 곳은?", options: ["가나 혼인잔치", "가버나움", "베다니", "여리고"], correct: 0, explain: "정답은 가나 혼인잔치입니다. 예수님의 첫 표적이었습니다." },
+  { q: "예수님을 세 번 부인한 제자는?", options: ["요한", "베드로", "안드레", "빌립"], correct: 1, explain: "정답은 베드로입니다. 닭 울기 전 세 번 부인했다가 크게 통곡했습니다." },
+  { q: "예수님이 태어나신 마을은?", options: ["나사렛", "베들레헴", "예루살렘", "가버나움"], correct: 1, explain: "정답은 베들레헴입니다. 다윗의 고향에서 예수님이 나셨습니다." },
+];
+const CONCERN_OPTIONS = ["중독", "가정", "관계", "진로", "건강", "돈"];
+const NUM_Q = 4;
+
+let questions = [];
+let qIdx = 0;
+let selectedOption = null;
+let concerns = [];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function show(id) {
+  ["stage-setup","stage-question","stage-concerns","stage-contact","stage-submitting","stage-thanks"]
+    .forEach(s => document.getElementById(s).classList.toggle("hidden", s !== id));
+}
+function currentQ() { return questions[qIdx]; }
+
+function speak(text) {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR";
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function startQuiz() {
+  questions = shuffle(QUESTION_POOL).slice(0, NUM_Q);
+  qIdx = 0;
+  renderQuestion();
+  show("stage-question");
+}
+
+function renderQuestion() {
+  selectedOption = null;
+  const q = currentQ();
+  document.getElementById("qcounter").textContent = `문제 ${qIdx + 1} / ${questions.length}`;
+  document.getElementById("qtext").textContent = q.q;
+  document.getElementById("btn-reveal").classList.remove("hidden");
+  document.getElementById("reveal-block").classList.add("hidden");
+
+  const optWrap = document.getElementById("options");
+  optWrap.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = `${String.fromCharCode(65+i)}. ${opt}`;
+    b.onclick = () => selectOption(i);
+    optWrap.appendChild(b);
+  });
+}
+
+function selectOption(i) {
+  selectedOption = i;
+  document.querySelectorAll("#options .opt").forEach((el, idx) => {
+    el.classList.toggle("selected", idx === i);
+  });
+}
+
+function reveal() {
+  const q = currentQ();
+  document.querySelectorAll("#options .opt").forEach((el, idx) => {
+    el.disabled = true;
+    if (idx === q.correct) el.classList.add("correct");
+  });
+  document.getElementById("btn-reveal").classList.add("hidden");
+  document.getElementById("explaintext").textContent = q.explain;
+  document.getElementById("reveal-block").classList.remove("hidden");
+  document.getElementById("btn-next").textContent = (qIdx + 1 >= questions.length) ? "나눔으로 이동 →" : "다음 문제 →";
+  speak(q.explain);
+}
+
+function nextAfterReveal() {
+  qIdx++;
+  if (qIdx >= questions.length) {
+    renderConcerns();
+    show("stage-concerns");
+  } else {
+    renderQuestion();
+  }
+}
+
+function renderConcerns() {
+  concerns = [];
+  const grid = document.getElementById("concernsGrid");
+  grid.innerHTML = "";
+  CONCERN_OPTIONS.forEach(c => {
+    const b = document.createElement("button");
+    b.className = "concern-btn";
+    b.textContent = c;
+    b.onclick = () => {
+      if (concerns.includes(c)) {
+        concerns = concerns.filter(x => x !== c);
+        b.classList.remove("selected");
+      } else {
+        concerns.push(c);
+        b.classList.add("selected");
+      }
+    };
+    grid.appendChild(b);
+  });
+}
+
+function goContact() {
+  show("stage-contact");
+}
+
+async function submitForm() {
+  const name = document.getElementById("nameInput").value.trim();
+  const phone = document.getElementById("phoneInput").value.trim();
+  const errEl = document.getElementById("errMsg");
+  errEl.classList.add("hidden");
+
+  if (!name || !phone) {
+    errEl.textContent = "이름과 연락처를 입력해주세요";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  show("stage-submitting");
+  try {
+    await fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ name, phone, concerns }),
+    });
+    document.getElementById("thanksName").textContent = name;
+    show("stage-thanks");
+  } catch (err) {
+    show("stage-contact");
+    errEl.textContent = "전송 실패: " + (err && err.message ? err.message : String(err));
+    errEl.classList.remove("hidden");
+  }
+}
+
+function restart() {
+  questions = []; qIdx = 0; selectedOption = null; concerns = [];
+  document.getElementById("nameInput").value = "";
+  document.getElementById("phoneInput").value = "";
+  show("stage-setup");
+}
+</script>
+</body>
+</html>
