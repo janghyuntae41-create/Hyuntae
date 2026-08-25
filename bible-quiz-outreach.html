@@ -27,9 +27,12 @@
   .btn {
     width:100%; border:none; border-radius:14px; padding:20px; font-weight:700; font-size:19px;
     cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
   }
+  .btn:active { transform: scale(0.95); }
   .btn-primary { background:#fbbf24; color:#1e1b4b; }
   .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-primary:disabled:active { transform:none; }
   .btn-secondary { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
   .qcard { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:26px 22px; margin-bottom:20px; }
   .qcard p { font-size:23px; font-weight:700; line-height:1.45; margin:0; }
@@ -37,9 +40,10 @@
   .opt {
     text-align:left; padding:18px 20px; border-radius:14px; font-size:18px; font-weight:600;
     border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); color:#fff; cursor:pointer;
-    line-height:1.4;
+    line-height:1.4; transition: transform .12s ease, background .15s ease, border-color .15s ease;
   }
-  .opt.selected { background:rgba(251,191,36,.25); border-color:#fbbf24; }
+  .opt:active:not(:disabled) { transform: scale(0.97); }
+  .opt.selected { background:rgba(251,191,36,.25); border-color:#fbbf24; transform: scale(1.01); }
   .opt.correct { background:rgba(16,185,129,.3); border-color:#34d399; }
   .opt:disabled { cursor:default; }
   .explain-box { background:rgba(16,185,129,.1); border:1px solid rgba(52,211,153,.3); border-radius:14px; padding:20px; margin-bottom:20px; }
@@ -47,8 +51,9 @@
   .replay { background:none; border:none; color:#6ee7b7; font-size:15px; text-decoration:underline; cursor:pointer; padding:0; }
   .row-top { display:flex; justify-content:space-between; align-items:center; font-size:15px; color:#a5b4fc; margin-bottom:16px; }
   .concerns { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px; }
-  .concern-btn { padding:22px; border-radius:14px; font-weight:700; font-size:18px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.05); color:#fff; cursor:pointer; }
-  .concern-btn.selected { background:rgba(251,113,133,.25); border-color:#fb7185; color:#fecdd3; }
+  .concern-btn { padding:22px; border-radius:14px; font-weight:700; font-size:18px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.05); color:#fff; cursor:pointer; transition: transform .12s ease, background .15s ease, border-color .15s ease; }
+  .concern-btn:active { transform: scale(0.95); }
+  .concern-btn.selected { background:rgba(251,113,133,.25); border-color:#fb7185; color:#fecdd3; transform: scale(1.02); }
   input[type=text], input[type=tel] {
     width:100%; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:14px;
     padding:18px 20px; color:#fff; font-size:18px; margin-bottom:14px; outline:none;
@@ -76,7 +81,7 @@
   <div id="stage-question" class="hidden">
     <div class="row-top">
       <span id="qcounter"></span>
-      <span>편하게 답해보세요</span>
+      <span id="scoreDisplay" style="font-weight:700; color:#fbbf24;">✅ 0개 맞춤</span>
     </div>
     <div class="qcard"><p id="qtext"></p></div>
     <div class="options" id="options"></div>
@@ -132,11 +137,12 @@
   <div id="stage-thanks" class="hidden center" style="margin-top:40px;">
     <div class="thanks-icon">✅</div>
     <p style="font-size:20px; font-weight:700; margin:8px 0;">감사합니다, <span id="thanksName"></span>님</p>
+    <p id="finalScore" style="font-size:17px; font-weight:700; color:#fbbf24; margin:0 0 20px;"></p>
     <p class="sub" style="margin-bottom:32px;">나눠주신 이야기 소중히 기억하겠습니다.</p>
     <button class="btn btn-secondary" onclick="restart()">🔄 처음으로</button>
   </div>
 </div>
-<p style="text-align:center; color:#4c1d95; font-size:11px; margin-top:24px;">build v11-100q</p>
+<p style="text-align:center; color:#4c1d95; font-size:11px; margin-top:24px;">build v12-anim-score</p>
 
 <script>
 // ===== 설정: Apps Script 배포 URL =====
@@ -269,6 +275,7 @@ let questions = [];
 let qIdx = 0;
 let selectedOption = null;
 let concerns = [];
+let correctCount = 0;
 
 function shuffle(arr) {
   const a = [...arr];
@@ -298,14 +305,20 @@ function startQuiz() {
   const general = shuffle(GENERAL_POOL).slice(0, NUM_GENERAL);
   questions = [...general, FINAL_BIBLE_QUESTION];
   qIdx = 0;
+  correctCount = 0;
   renderQuestion();
   show("stage-question");
+}
+
+function updateScoreDisplay() {
+  document.getElementById("scoreDisplay").textContent = `✅ ${correctCount}개 맞춤`;
 }
 
 function renderQuestion() {
   selectedOption = null;
   const q = currentQ();
   document.getElementById("qcounter").textContent = `문제 ${qIdx + 1} / ${questions.length}`;
+  updateScoreDisplay();
   document.getElementById("qtext").textContent = q.q;
   document.getElementById("btn-reveal").classList.remove("hidden");
   document.getElementById("reveal-block").classList.add("hidden");
@@ -330,6 +343,10 @@ function selectOption(i) {
 
 function reveal() {
   const q = currentQ();
+  if (selectedOption === q.correct) {
+    correctCount++;
+    updateScoreDisplay();
+  }
   document.querySelectorAll("#options .opt").forEach((el, idx) => {
     el.disabled = true;
     if (idx === q.correct) el.classList.add("correct");
@@ -411,6 +428,8 @@ async function submitForm() {
       mode: "no-cors",
     });
     document.getElementById("thanksName").textContent = name;
+    document.getElementById("finalScore").textContent =
+      correctCount >= 3 ? `🎉 ${correctCount}개 정답! 선물 대상입니다` : `${correctCount}개 정답을 맞히셨어요`;
     show("stage-thanks");
   } catch (err) {
     show("stage-contact");
@@ -420,7 +439,7 @@ async function submitForm() {
 }
 
 function restart() {
-  questions = []; qIdx = 0; selectedOption = null; concerns = [];
+  questions = []; qIdx = 0; selectedOption = null; concerns = []; correctCount = 0;
   document.getElementById("nameInput").value = "";
   document.getElementById("phoneInput").value = "";
   document.getElementById("agreeCheck").checked = false;
