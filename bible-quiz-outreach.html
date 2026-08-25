@@ -99,6 +99,13 @@
       <p class="sub">해당하는 것을 모두 골라주세요</p>
     </div>
     <div class="concerns" id="concernsGrid"></div>
+    <button class="btn btn-primary" onclick="goConcernDetail()">다음 →</button>
+  </div>
+
+  <!-- 고민 직접 작성 -->
+  <div id="stage-concern-detail" class="hidden">
+    <p class="sub">조금 더 편하게 이야기해주셔도 좋아요 (선택)</p>
+    <textarea id="concernNote" rows="5" placeholder="자유롭게 적어주세요..." style="width:100%; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:14px; padding:16px; color:#fff; font-size:17px; margin-bottom:20px; outline:none; resize:vertical; font-family:inherit;"></textarea>
     <button class="btn btn-primary" onclick="goContact()">다음 →</button>
   </div>
 
@@ -179,7 +186,7 @@ function shuffle(arr) {
   return a;
 }
 function show(id) {
-  ["stage-setup","stage-question","stage-concerns","stage-contact","stage-submitting","stage-thanks"]
+  ["stage-setup","stage-question","stage-concerns","stage-concern-detail","stage-contact","stage-submitting","stage-thanks"]
     .forEach(s => document.getElementById(s).classList.toggle("hidden", s !== id));
 }
 function currentQ() { return questions[qIdx]; }
@@ -272,6 +279,11 @@ function renderConcerns() {
   });
 }
 
+function goConcernDetail() {
+  document.getElementById("concernNote").value = "";
+  show("stage-concern-detail");
+}
+
 function goContact() {
   show("stage-contact");
 }
@@ -299,6 +311,7 @@ async function submitForm() {
       name: name,
       phone: phone,
       concerns: concerns.join(", "),
+      note: document.getElementById("concernNote").value.trim(),
     });
     await fetch(GAS_URL + "?" + params.toString(), {
       method: "GET",
@@ -318,6 +331,7 @@ function restart() {
   document.getElementById("nameInput").value = "";
   document.getElementById("phoneInput").value = "";
   document.getElementById("agreeCheck").checked = false;
+  document.getElementById("concernNote").value = "";
   show("stage-setup");
 }
 </script>
