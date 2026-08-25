@@ -64,12 +64,19 @@
   .hidden { display:none; }
   .heart { font-size:44px; margin-bottom:10px; }
   .thanks-icon { font-size:72px; margin-bottom:16px; }
+  @keyframes pangpang {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.25) rotate(-8deg); }
+    50% { transform: scale(1.05) rotate(6deg); }
+    75% { transform: scale(1.25) rotate(-4deg); }
+  }
+  .pang { display:inline-block; animation: pangpang 1s ease-in-out infinite; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1><span class="badge">🎉</span> 캠페인 퀴즈</h1>
-  <p class="sub" style="margin-top:-16px; font-weight:700; color:#fbbf24;">3개 이상 맞추면 선물이 팡팡!!</p>
+  <p class="sub" style="margin-top:-16px; font-weight:700; color:#fbbf24;">3개 이상 맞추면 선물이 <span class="pang">팡</span><span class="pang" style="animation-delay:.15s;">팡</span>!!</p>
 
   <!-- 시작 화면 -->
   <div id="stage-setup">
@@ -90,10 +97,18 @@
     <div id="reveal-block" class="hidden">
       <div class="explain-box">
         <p id="explaintext"></p>
-        <button class="replay" onclick="speak(currentQ().explain)">🔊 다시 듣기</button>
       </div>
       <button class="btn btn-primary" id="btn-next" onclick="nextAfterReveal()">다음 문제 →</button>
     </div>
+  </div>
+
+  <!-- 퀴즈 결과 -->
+  <div id="stage-quiz-result" class="hidden center" style="margin-top:40px;">
+    <div style="font-size:64px; margin-bottom:8px;" id="resultEmoji"></div>
+    <p style="font-size:20px; color:#c7d2fe; margin:0 0 6px;">총 <span id="resultTotal"></span>문제 중</p>
+    <p style="font-size:56px; font-weight:900; color:#fbbf24; margin:0 0 12px; line-height:1.1;" id="resultCount"></p>
+    <p style="font-size:19px; font-weight:700; margin:0 0 36px;" id="resultMsg"></p>
+    <button class="btn btn-primary" onclick="proceedToConcerns()">다음 →</button>
   </div>
 
   <!-- 고민 선택 -->
@@ -142,7 +157,7 @@
     <button class="btn btn-secondary" onclick="restart()">🔄 처음으로</button>
   </div>
 </div>
-<p style="text-align:center; color:#4c1d95; font-size:11px; margin-top:24px;">build v12-anim-score</p>
+<p style="text-align:center; color:#4c1d95; font-size:11px; margin-top:24px;">build v13-noresult-nospeak</p>
 
 <script>
 // ===== 설정: Apps Script 배포 URL =====
@@ -286,20 +301,10 @@ function shuffle(arr) {
   return a;
 }
 function show(id) {
-  ["stage-setup","stage-question","stage-concerns","stage-concern-detail","stage-contact","stage-submitting","stage-thanks"]
+  ["stage-setup","stage-question","stage-quiz-result","stage-concerns","stage-concern-detail","stage-contact","stage-submitting","stage-thanks"]
     .forEach(s => document.getElementById(s).classList.toggle("hidden", s !== id));
 }
 function currentQ() { return questions[qIdx]; }
-
-function speak(text) {
-  try {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ko-KR";
-    window.speechSynthesis.speak(u);
-  } catch (e) {}
-}
 
 function startQuiz() {
   const general = shuffle(GENERAL_POOL).slice(0, NUM_GENERAL);
@@ -354,18 +359,33 @@ function reveal() {
   document.getElementById("btn-reveal").classList.add("hidden");
   document.getElementById("explaintext").textContent = q.explain;
   document.getElementById("reveal-block").classList.remove("hidden");
-  document.getElementById("btn-next").textContent = (qIdx + 1 >= questions.length) ? "나눔으로 이동 →" : "다음 문제 →";
-  speak(q.explain);
+  document.getElementById("btn-next").textContent = (qIdx + 1 >= questions.length) ? "결과 보기 →" : "다음 문제 →";
 }
 
 function nextAfterReveal() {
   qIdx++;
   if (qIdx >= questions.length) {
-    renderConcerns();
-    show("stage-concerns");
+    showQuizResult();
   } else {
     renderQuestion();
   }
+}
+
+function showQuizResult() {
+  const total = questions.length;
+  document.getElementById("resultTotal").textContent = total;
+  document.getElementById("resultCount").textContent = `${correctCount}개 정답`;
+  const passed = correctCount >= 3;
+  document.getElementById("resultEmoji").textContent = passed ? "🎉" : "👏";
+  document.getElementById("resultMsg").textContent = passed
+    ? "축하합니다! 선물 대상이에요 🎁"
+    : "참여해주셔서 감사합니다!";
+  show("stage-quiz-result");
+}
+
+function proceedToConcerns() {
+  renderConcerns();
+  show("stage-concerns");
 }
 
 function renderConcerns() {
